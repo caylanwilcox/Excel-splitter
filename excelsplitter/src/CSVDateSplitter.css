@@ -1,0 +1,175 @@
+/* src/CSVDateSplitter.css */
+
+.container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 25px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+  }
+  
+  h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #333333;
+  }
+  
+  p {
+    text-align: center;
+    color: #555555;
+    margin-bottom: 30px;
+  }
+  
+  .section {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .custom-file-upload {
+    display: inline-block;
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .custom-file-upload:hover {
+    background-color: #0056b3;
+  }
+  
+  .custom-file-upload input[type="file"] {
+    display: none;
+  }
+  
+  .file-name {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #333333;
+  }
+  
+  .date-inputs {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .date-input {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .date-input label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333333;
+  }
+  
+  .date-input input[type="date"],
+  .date-input input[type="text"] {
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+  }
+  
+  .split-button {
+    padding: 12px 24px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .split-button:hover {
+    background-color: #218838;
+  }
+  
+  .split-button:disabled {
+    background-color: #94d3a2;
+    cursor: not-allowed;
+  }
+  
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .summary {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .skipped-rows {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  
+  .skipped-rows h3 {
+    margin-top: 0;
+  }
+  
+  .skipped-rows ul {
+    list-style-type: disc;
+    padding-left: 20px;
+    text-align: left;
+  }
+  
+  .data-preview {
+    margin-top: 30px;
+  }
+  
+  .data-preview h3 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #333333;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  th,
+  td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+  
+  th {
+    background-color: #f2f2f2;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
