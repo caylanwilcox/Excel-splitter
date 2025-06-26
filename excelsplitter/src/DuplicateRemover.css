@@ -1,0 +1,260 @@
+.helper-text {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 15px;
+  line-height: 1.4;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+}/* DuplicateRemover.css */
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.app-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.app-header h1 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.app-header p {
+  color: #7f8c8d;
+}
+
+.app-main {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.file-upload-container {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.file-input-wrapper {
+  margin: 20px 0;
+}
+
+.file-input {
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: -1;
+}
+
+.file-input-label {
+  display: inline-block;
+  background-color: #3498db;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.file-input-label:hover {
+  background-color: #2980b9;
+}
+
+.process-button, .export-button, .verify-button, .compare-button {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+.process-button:hover, .export-button:hover, .verify-button:hover, .compare-button:hover {
+  background-color: #27ae60;
+}
+
+.process-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.verify-button {
+  background-color: #3498db;
+}
+
+.verify-button:hover {
+  background-color: #2980b9;
+}
+
+.compare-button {
+  background-color: #9b59b6;
+}
+
+.compare-button:hover {
+  background-color: #8e44ad;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 15px 0;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 15px 0;
+}
+
+.stats-container {
+  background-color: #e8f4fd;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+.stats-container h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.report-buttons {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.results-container {
+  margin-top: 30px;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.preview-container {
+  margin-top: 30px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.data-preview {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-preview tr {
+  border-bottom: 1px solid #ddd;
+}
+
+.data-preview tr.header-row {
+  background-color: #3498db;
+  color: white;
+  font-weight: bold;
+}
+
+.data-preview tr.kept-row {
+  background-color: #e2efda; /* Light green */
+}
+
+.data-preview tr.removed-row {
+  background-color: #fce4d6; /* Light orange/peach */
+}
+
+.data-preview td {
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.data-preview td.differences-cell {
+  max-width: 300px;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.preview-note {
+  margin-top: 10px;
+  font-style: italic;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.verification-preview {
+  margin-top: 30px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.verification-preview h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.verification-info {
+  margin-bottom: 15px;
+}
+
+.verification-info p {
+  margin-bottom: 8px;
+}
+
+.verification-info ul {
+  margin-top: 5px;
+  padding-left: 20px;
+}
+
+.verification-info li {
+  margin-bottom: 5px;
+}
+
+.app-footer {
+  margin-top: 30px;
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .process-button, .export-button, .verify-button, .compare-button {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+  
+  .report-buttons {
+    flex-direction: column;
+  }
+}
