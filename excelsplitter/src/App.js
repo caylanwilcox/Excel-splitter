@@ -148,6 +148,27 @@ function App() {
     };
   };
 
+  // Helper function to detect header format
+  const detectHeaderFormat = (headers) => {
+    const headerStr = headers.map(h => h?.toString().trim().toLowerCase()).join(',');
+    
+    // Check for format 1: Original format
+    const format1Headers = ['staffing entity', 'worksite customer', 'employeeid', 'employee name', 'transactionguid', 'weekworked', 'reg hours'];
+    const isFormat1 = format1Headers.every(h => headerStr.includes(h));
+    
+    // Check for other expected columns to validate format
+    const hasExpectedColumns = headerStr.includes('transactionguid') && 
+                               (headerStr.includes('reg hours') || headerStr.includes('reghours'));
+    
+    if (isFormat1) {
+      return { format: 'staffing', valid: true };
+    } else if (hasExpectedColumns) {
+      return { format: 'alternative', valid: true };
+    } else {
+      return { format: 'unknown', valid: false };
+    }
+  };
+
   // Process file for removing transaction duplicates
   const processTransactionDuplicates = async () => {
     if (!file) {
@@ -183,6 +204,14 @@ function App() {
       // Get headers
       const headers = jsonData[0];
 
+      // Detect header format
+      const headerFormat = detectHeaderFormat(headers);
+      if (!headerFormat.valid) {
+        throw new Error('Invalid file format. Expected headers including TransactionGUID and Reg Hours columns.');
+      }
+      
+      console.log(`Detected header format: ${headerFormat.format}`);
+
       // Find the index of TransactionGUID column
       const transactionGuidIndex = headers.findIndex(
         header => header && header.toString().trim().toLowerCase() === 'transactionguid'
@@ -192,11 +221,20 @@ function App() {
         throw new Error('TransactionGUID column not found in the file.');
       }
       
+      // Find the index of Reg Hours column - handles both "Reg Hours" and "RegHours"
+      const regHoursIndex = headers.findIndex(
+        header => {
+          const normalized = header && header.toString().trim().toLowerCase().replace(/\s+/g, '');
+          return normalized === 'reghours' || normalized === 'regularhours';
+        }
+      );
+      
       // Process data to remove duplicates
       const uniqueTransactions = new Map();
       const duplicatesRemoved = [];
       const uniqueRows = [];
       const duplicateSets = {};
+      const skippedZeroHours = [];
       
       // Skip header row, process all data rows
       for (let i = 1; i < jsonData.length; i++) {
@@ -208,6 +246,20 @@ function App() {
         if (!transactionId) {
           // Skip rows with empty transaction IDs
           continue;
+        }
+        
+        // Check if Reg Hours is 0 (if column exists)
+        if (regHoursIndex !== -1) {
+          const regHours = parseFloat(row[regHoursIndex]) || 0;
+          if (regHours === 0) {
+            // Skip rows with 0 regular hours and track them
+            skippedZeroHours.push({
+              rowIndex: i,
+              row,
+              transactionId
+            });
+            continue;
+          }
         }
         
         if (!uniqueTransactions.has(transactionId)) {
@@ -309,6 +361,7 @@ function App() {
         totalRows: jsonData.length - 1, // Excluding header row
         uniqueRows: uniqueRows.length,
         duplicatesRemoved: duplicatesRemoved.length,
+        skippedZeroHours: skippedZeroHours.length,
         duplicateSets: Object.keys(duplicateSets).length,
         exactDuplicatesCount: verificationRows.filter(row => row[3] === 'Yes').length,
         partialDuplicatesCount: verificationRows.filter(row => row[3] === 'No').length,
@@ -318,7 +371,226 @@ function App() {
       // Store the data for preview
       setProcessedData(processedRows);
       
-      setSuccess('File processed successfully! Duplicates have been removed. You can now export the results.');
+      const formatName = headerFormat.format === 'staffing' ? 'Staffing format' : 'Alternative format';
+      const successMessage = skippedZeroHours.length > 0 
+        ? `File processed successfully (${formatName})! Duplicates have been removed and ${skippedZeroHours.length} rows with 0 regular hours were excluded. You can now export the results.`
+        : `File processed successfully (${formatName})! Duplicates have been removed. You can now export the results.`;
+      setSuccess(successMessage);
+    } catch (err) {
+      console.error('Error processing file:', err);
+      setError(`Error processing file: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Process file for removing customer transaction duplicates
+  const processCustomerTransactionDuplicates = async () => {
+    if (!file) {
+      setError('Please select an Excel file first.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // Read the file
+      const data = await readFileAsync(file);
+      
+      // Parse the Excel data
+      const workbook = XLSX.read(data, {
+        type: 'array',
+        cellDates: true
+      });
+      
+      // Get the first sheet
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON with headers
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      if (jsonData.length < 2) {
+        throw new Error('The file does not contain enough data.');
+      }
+      
+      // Get headers
+      const headers = jsonData[0];
+
+      // Validate customer format headers
+      const requiredHeaders = ['customername', 'employeeid', 'transactionguid', 'reghours'];
+      const headerStr = headers.map(h => h?.toString().trim().toLowerCase().replace(/\s+/g, '')).join(',');
+      
+      const hasRequiredHeaders = requiredHeaders.every(h => headerStr.includes(h));
+      if (!hasRequiredHeaders) {
+        throw new Error('Invalid file format. Expected headers: CustomerName, EmployeeID, TransactionGUID, Reg Hours, etc.');
+      }
+
+      // Find the index of TransactionGUID column
+      const transactionGuidIndex = headers.findIndex(
+        header => header && header.toString().trim().toLowerCase() === 'transactionguid'
+      );
+      
+      if (transactionGuidIndex === -1) {
+        throw new Error('TransactionGUID column not found in the file.');
+      }
+      
+      // Find the index of Reg Hours column
+      const regHoursIndex = headers.findIndex(
+        header => {
+          const normalized = header && header.toString().trim().toLowerCase().replace(/\s+/g, '');
+          return normalized === 'reghours' || normalized === 'regularhours';
+        }
+      );
+      
+      // Process data to remove duplicates
+      const uniqueTransactions = new Map();
+      const duplicatesRemoved = [];
+      const uniqueRows = [];
+      const duplicateSets = {};
+      const skippedZeroHours = [];
+      
+      // Skip header row, process all data rows
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (row.length === 0) continue; // Skip empty rows
+        
+        const transactionId = row[transactionGuidIndex]?.toString().trim();
+        
+        if (!transactionId) {
+          // Skip rows with empty transaction IDs
+          continue;
+        }
+        
+        // Check if Reg Hours is 0 (if column exists)
+        if (regHoursIndex !== -1) {
+          const regHours = parseFloat(row[regHoursIndex]) || 0;
+          if (regHours === 0) {
+            // Skip rows with 0 regular hours and track them
+            skippedZeroHours.push({
+              rowIndex: i,
+              row,
+              transactionId
+            });
+            continue;
+          }
+        }
+        
+        if (!uniqueTransactions.has(transactionId)) {
+          // This is a new unique transaction ID
+          uniqueTransactions.set(transactionId, { rowIndex: i, row });
+          uniqueRows.push(row);
+        } else {
+          // This is a duplicate transaction ID
+          const originalRow = uniqueTransactions.get(transactionId);
+          
+          // Add to duplicates removed
+          duplicatesRemoved.push({
+            rowIndex: i,
+            row,
+            originalRowIndex: originalRow.rowIndex
+          });
+          
+          // Create or update the duplicate set for this transaction ID
+          if (!duplicateSets[transactionId]) {
+            duplicateSets[transactionId] = {
+              transactionId,
+              originalRow: originalRow.row,
+              originalRowIndex: originalRow.rowIndex,
+              duplicates: []
+            };
+          }
+          
+          duplicateSets[transactionId].duplicates.push({
+            rowIndex: i,
+            row
+          });
+        }
+      }
+      
+      // Create a new array with header and unique rows
+      const processedRows = [headers, ...uniqueRows];
+      
+      // Create comparison report data
+      const comparisonReportData = [];
+      
+      // Add headers for the comparison report: Status + Original headers
+      comparisonReportData.push(['Status', ...headers]);
+      
+      // For each transaction ID with duplicates
+      for (const transactionId in duplicateSets) {
+        const set = duplicateSets[transactionId];
+        
+        // Add the original (kept) row
+        comparisonReportData.push(['KEPT', ...set.originalRow]);
+        
+        // Add each duplicate (removed) row
+        set.duplicates.forEach(duplicate => {
+          comparisonReportData.push(['REMOVED', ...duplicate.row]);
+        });
+        
+        // Add a blank row as separator
+        comparisonReportData.push(Array(headers.length + 1).fill(''));
+      }
+      
+      // Create verification sheet data
+      const verificationHeaders = [
+        'Transaction ID',
+        'Kept Row #',
+        'Removed Row #',
+        'Is Exact Duplicate?',
+        'Differences (if any)'
+      ];
+      
+      const verificationRows = [];
+      for (const transactionId in duplicateSets) {
+        const set = duplicateSets[transactionId];
+        
+        set.duplicates.forEach(duplicate => {
+          // Compare rows to check if they're exact duplicates
+          const isExactDuplicate = compareRows(set.originalRow, duplicate.row, headers);
+          
+          // Find differences if not an exact duplicate
+          let differences = '';
+          if (!isExactDuplicate.exactMatch) {
+            differences = isExactDuplicate.differences.join(', ');
+          }
+          
+          verificationRows.push([
+            transactionId,
+            set.originalRowIndex + 1, // +1 for Excel row number (1-based)
+            duplicate.rowIndex + 1,   // +1 for Excel row number (1-based)
+            isExactDuplicate.exactMatch ? 'Yes' : 'No',
+            differences
+          ]);
+        });
+      }
+      
+      // Save comparison and verification data for export
+      setComparisonData(comparisonReportData);
+      setVerificationData([verificationHeaders, ...verificationRows]);
+      
+      // Update stats with verification info
+      setStats({
+        totalRows: jsonData.length - 1, // Excluding header row
+        uniqueRows: uniqueRows.length,
+        duplicatesRemoved: duplicatesRemoved.length,
+        skippedZeroHours: skippedZeroHours.length,
+        duplicateSets: Object.keys(duplicateSets).length,
+        exactDuplicatesCount: verificationRows.filter(row => row[3] === 'Yes').length,
+        partialDuplicatesCount: verificationRows.filter(row => row[3] === 'No').length,
+        headers
+      });
+      
+      // Store the data for preview
+      setProcessedData(processedRows);
+      
+      const successMessage = skippedZeroHours.length > 0 
+        ? `File processed successfully (Customer format)! Duplicates have been removed and ${skippedZeroHours.length} rows with 0 regular hours were excluded. You can now export the results.`
+        : `File processed successfully (Customer format)! Duplicates have been removed. You can now export the results.`;
+      setSuccess(successMessage);
     } catch (err) {
       console.error('Error processing file:', err);
       setError(`Error processing file: ${err.message}`);
@@ -333,6 +605,8 @@ function App() {
       processGLJournalFile();
     } else if (activeTab === 'duplicateremover') {
       processTransactionDuplicates();
+    } else if (activeTab === 'customerduplicateremover') {
+      processCustomerTransactionDuplicates();
     }
   };
 
@@ -359,11 +633,13 @@ function App() {
       const wb = XLSX.utils.book_new();
       
       // Set sheet name based on the active tab
-      const sheetName = activeTab === 'gljournal' ? "GL Journal" : "Unique Transactions";
+      const sheetName = activeTab === 'gljournal' ? "GL Journal" : 
+                       (activeTab === 'customerduplicateremover' ? "Customer Transactions" : "Unique Transactions");
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
       
       // Generate a filename
-      const prefix = activeTab === 'gljournal' ? 'formatted' : 'unique';
+      const prefix = activeTab === 'gljournal' ? 'formatted' : 
+                    (activeTab === 'customerduplicateremover' ? 'customer_unique' : 'unique');
       const outputFileName = `${prefix}_${fileName}`;
       
       // Export to Excel
@@ -529,13 +805,16 @@ function App() {
           <p><strong>Balance Status:</strong> {stats.balanced ? 'Balanced ✓' : 'Unbalanced ✗'}</p>
         </div>
       );
-    } else if (activeTab === 'duplicateremover') {
+    } else if (activeTab === 'duplicateremover' || activeTab === 'customerduplicateremover') {
       return (
         <div className="stats-container">
           <h3>File Statistics</h3>
           <p><strong>Total Rows:</strong> {stats.totalRows}</p>
           <p><strong>Unique Transactions:</strong> {stats.uniqueRows}</p>
           <p><strong>Duplicates Removed:</strong> {stats.duplicatesRemoved}</p>
+          {stats.skippedZeroHours > 0 && (
+            <p><strong>Skipped (0 Reg Hours):</strong> {stats.skippedZeroHours}</p>
+          )}
           
           {verificationData && (
             <>
@@ -579,6 +858,11 @@ function App() {
         <>
           <h1>Staffing Transaction Duplicate Remover</h1>
           <p>Remove duplicate staffing transactions based on TransactionGUID</p>
+          <p className="format-note">
+            <strong>Note:</strong> Rows with 0 regular hours will be automatically excluded.
+            <br />
+            <strong>Supported formats:</strong> Files with TransactionGUID and Reg Hours columns
+          </p>
         </>
       );
     } else if (activeTab === 'employeeconsolidator') {
@@ -586,6 +870,20 @@ function App() {
         <>
           <h1>Employee Week Consolidator</h1>
           <p>Consolidate employee data by client and sum total weeks worked</p>
+        </>
+      );
+    } else if (activeTab === 'customerduplicateremover') {
+      return (
+        <>
+          <h1>Customer Transaction Duplicate Remover</h1>
+          <p>Remove duplicate customer transactions based on TransactionGUID</p>
+          <p className="format-note">
+            <strong>Note:</strong> Rows with 0 regular hours will be automatically excluded.
+            <br />
+            <strong>Expected headers:</strong> CustomerName, EmployeeID, Employee Name, WeekWorked, Reg Hours, 
+            Reg Wages, OT Hours, OT Wages, Double Hours, Double Wages, Total Hours, Total Wages, 
+            WC Wages, TransactionGUID, WC Amount, WC Code, Bill Amount, Final Billed
+          </p>
         </>
       );
     }
@@ -597,7 +895,7 @@ function App() {
     
     if (activeTab === 'gljournal') {
       return 'Process File';
-    } else if (activeTab === 'duplicateremover') {
+    } else if (activeTab === 'duplicateremover' || activeTab === 'customerduplicateremover') {
       return 'Remove Duplicates';
     }
     
@@ -614,6 +912,13 @@ function App() {
           Expected columns include: Staffing Entity, Worksite Customer, EmployeeID, Employee Name, 
           TransactionGUID, WeekWorked, Reg Hours, Reg Wages, OT Hours, OT Wages, Double Hours, 
           Double Wages, Total Hours, Total Wages, WC Wages, WC Amount, WC Code, Bill Amount, Final Billed, InvoiceNumber
+        </span>
+      );
+    } else if (activeTab === 'customerduplicateremover') {
+      return (
+        <span>
+          Upload an Excel file with customer transaction data. The tool will remove duplicate transactions 
+          based on TransactionGUID and exclude rows with 0 regular hours.
         </span>
       );
     }
@@ -646,6 +951,12 @@ function App() {
             onClick={() => setActiveTab('employeeconsolidator')}
           >
             Employee Consolidator
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'customerduplicateremover' ? 'active' : ''}`}
+            onClick={() => setActiveTab('customerduplicateremover')}
+          >
+            Customer Duplicate Remover
           </button>
         </div>
       </div>
@@ -691,6 +1002,8 @@ function App() {
                 <p>
                   {activeTab === 'gljournal' 
                     ? 'The file has been processed with full data integrity preserved.' 
+                    : activeTab === 'customerduplicateremover'
+                    ? 'Customer duplicate transactions have been removed based on TransactionGUID.'
                     : 'Duplicate transactions have been removed based on TransactionGUID.'}
                 </p>
                 <div className="button-group">
@@ -698,7 +1011,7 @@ function App() {
                     Download Excel File
                   </button>
                   
-                  {activeTab === 'duplicateremover' && verificationData && (
+                  {(activeTab === 'duplicateremover' || activeTab === 'customerduplicateremover') && verificationData && (
                     <>
                       <button onClick={exportVerificationData} className="verify-button">
                         Export Verification Report
